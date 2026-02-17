@@ -1,5 +1,6 @@
 // --- SPOTIFY AYARLARI ---
-const CLIENT_ID = 'BURAYA_KENDI_CLIENT_ID_KODUNU_YAPISTIR'; 
+const CLIENT_ID =  'a1365b21350f4b709887d1b0ffcbdaa5';
+
 const REDIRECT_URI = window.location.origin; 
 const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
 const RESPONSE_TYPE = "token";
