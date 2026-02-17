@@ -1,6 +1,6 @@
-window.onload = () => {
-    const hash = window.location.hash;
-    let token = window.localStorage.getItem('token');
+const CLIENT_ID = 'a1365b21350f4b709887d1b0ffcbdaa5';
+const REDIRECT_URI = 'https://m-zik-quiz.vercel.app'; // Sonunda slaç / OLMASIN
+const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize"; 
 
     // 1. URL'den Token Yakalama
     if (hash && hash.includes("access_token")) {
