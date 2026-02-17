@@ -1,49 +1,127 @@
-"use strict";
+// Spotify API Ayarları
+const CLIENT_ID = 'a1365b21350f4b709887d1b0ffcbdaa5'; // Senin Client ID'n
+const REDIRECT_URI = 'http://localhost:8000/spotify-connection.html'; // Kendi URL'ini yaz (Spotify Dashboard'da da aynı olmalı)
+const AUTH_ENDPOINT = 'https://accounts.spotify.com/authorize';
+const RESPONSE_TYPE = 'token';
+const SCOPES = [
+    'user-read-private',
+    'user-read-email',
+    'user-top-read',
+    'user-read-recently-played',
+    'playlist-read-private'
+].join(' ');
 
-const APP_CONFIG = Object.freeze({
-    CLIENT_ID: 'a1365b21350f4b709887d1b0ffcbdaa5',
-    REDIRECT_URI: 'https://m-zik-quiz.vercel.app/',
-    AUTH_URL: 'https://accounts.spotify.com/authorize'
-});
+// DOM Elementleri
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const userInfo = document.getElementById('userInfo');
+const loading = document.getElementById('loading');
+const errorMsg = document.getElementById('error');
 
-window.onload = function() {
+// Sayfa yüklendiğinde token kontrolü
+window.addEventListener('load', () => {
     const hash = window.location.hash;
-    
-    if (hash && hash.includes("access_token")) {
-        const params = new URLSearchParams(hash.substring(1));
-        const token = params.get("access_token");
-        if (token) {
-            localStorage.setItem('spotify_token', token);
-            window.history.replaceState(null, null, ' '); // URL'yi temizle
-            showGame();
-            return;
+    let token = window.localStorage.getItem('spotify_token');
+
+    // URL'den token al
+    if (hash) {
+        const tokenMatch = hash.match(/access_token=([^&]*)/);
+        if (tokenMatch) {
+            token = tokenMatch[1];
+            window.localStorage.setItem('spotify_token', token);
+            window.location.hash = ''; // URL'i temizle
         }
     }
 
-    if (localStorage.getItem('spotify_token')) {
-        showGame();
+    // Token varsa kullanıcı bilgilerini al
+    if (token) {
+        getUserProfile(token);
     }
-};
+});
 
-function redirectToSpotify() {
-    const url = `${APP_CONFIG.AUTH_URL}?client_id=${APP_CONFIG.CLIENT_ID}&redirect_uri=${encodeURIComponent(APP_CONFIG.REDIRECT_URI)}&response_type=token&show_dialog=true`;
-    window.location.href = url;
+// Spotify'a giriş yap
+loginBtn.addEventListener('click', () => {
+    const authUrl = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=${RESPONSE_TYPE}&scope=${SCOPES}`;
+    window.location.href = authUrl;
+});
+
+// Kullanıcı profilini al
+async function getUserProfile(token) {
+    loading.classList.add('active');
+    loginBtn.disabled = true;
+    errorMsg.classList.remove('active');
+
+    try {
+        const response = await fetch('https://api.spotify.com/v1/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Token geçersiz veya süresi dolmuş');
+        }
+
+        const data = await response.json();
+        displayUserInfo(data);
+        
+        // İsteğe bağlı: En çok dinlenen şarkıları al
+        getTopTracks(token);
+
+    } catch (error) {
+        console.error('Hata:', error);
+        errorMsg.textContent = 'Bağlantı hatası: ' + error.message;
+        errorMsg.classList.add('active');
+        localStorage.removeItem('spotify_token');
+        loginBtn.disabled = false;
+    } finally {
+        loading.classList.remove('active');
+    }
 }
 
-function showGame() {
-    // HTML'deki ID'leri tam burada eşliyoruz
-    const login = document.getElementById('login-screen');
-    const game = document.getElementById('game-container');
+// Kullanıcı bilgilerini göster
+function displayUserInfo(data) {
+    document.getElementById('displayName').textContent = data.display_name || 'Bilinmiyor';
+    document.getElementById('email').textContent = data.email || 'Bilinmiyor';
+    document.getElementById('country').textContent = data.country || 'Bilinmiyor';
+    document.getElementById('followers').textContent = data.followers?.total || 0;
     
-    if (login && game) {
-        login.style.display = 'none';
-        game.style.display = 'block';
-        game.classList.remove('hidden');
-        console.log("🛡️ Sistem Güvenli: Oyun Başlatıldı.");
+    if (data.images && data.images.length > 0) {
+        document.getElementById('profileImg').src = data.images[0].url;
+    } else {
+        document.getElementById('profileImg').src = 'https://via.placeholder.com/100';
+    }
+
+    userInfo.classList.add('active');
+    loginBtn.style.display = 'none';
+}
+
+// En çok dinlenen şarkıları al (Örnek)
+async function getTopTracks(token) {
+    try {
+        const response = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=short_term', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('En çok dinlenen şarkıların:', data.items);
+            // Burada şarkıları gösterebilirsin
+        }
+    } catch (error) {
+        console.error('Şarkılar alınamadı:', error);
     }
 }
 
-function logout() {
+// Çıkış yap
+logoutBtn.addEventListener('click', () => {
     localStorage.removeItem('spotify_token');
-    window.location.reload();
-}
+    userInfo.classList.remove('active');
+    loginBtn.style.display = 'block';
+    loginBtn.disabled = false;
+    
+    // Sayfayı yenile
+    window.location.href = window.location.pathname;
+});
