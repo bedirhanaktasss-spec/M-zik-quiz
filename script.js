@@ -1,9 +1,7 @@
 const CLIENT_ID = 'a1365b21350f4b709887d1b0ffcbdaa5';
-const REDIRECT_URI = 'https://m-zik-quiz.vercel.app'; 
-const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
+const REDIRECT_URI = 'https://m-zik-quiz.vercel.app'; // Dashboard'da da sonunda / OLMASIN!
 
-
-// Şarkı listesi
+// Şarkı havuzu
 const trackPool = [
     { name: "10MG", artist: "Motive", id: "0v0oV9h6jO0pI4B4y8mX8D" },
     { name: "Arasan Da", artist: "Uzi", id: "2S6p6DqF6UQY5WfW" },
@@ -18,32 +16,25 @@ let score = 0;
 window.onload = () => {
     const hash = window.location.hash;
     
-    // 1. Token yakalama
+    // 1. Token varsa yakala
     if (hash && hash.includes("access_token")) {
-        const params = new URLSearchParams(hash.substring(1));
-        token = params.get("access_token");
+        token = new URLSearchParams(hash.substring(1)).get("access_token");
         window.localStorage.setItem('token', token);
         window.location.hash = "";
     }
 
-    // 2. Giriş kontrolü (Hata buradaydı, URL'yi tertemiz yapıyoruz)
+    // 2. Giriş kontrolü
     if (!token) {
-        // Hata alma ihtimalini bitirmek için URL'yi manuel birleştiriyoruz:
-        const loginUrl = AUTH_ENDPOINT + 
-                         "?client_id=" + CLIENT_ID + 
-                         "&redirect_uri=" + encodeURIComponent(REDIRECT_URI) + 
-                         "&response_type=token" + 
-                         "&scope=user-read-private";
+        // HATA BURADAYDI: URL'yi Spotify'ın tam istediği gibi tek satırda yazıyoruz
+        const loginUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=user-read-private`;
         
         window.location.href = loginUrl;
     } else {
-        // Eğer giriş varsa oyunu başlat
-        document.getElementById('game-container').style.display = 'block';
+        document.getElementById('game-screen').style.display = 'block';
         nextQuestion();
     }
 };
 
-// --- Oyun Fonksiyonları (Öncekiyle aynı kalsın) ---
 async function nextQuestion() {
     const track = trackPool[Math.floor(Math.random() * trackPool.length)];
     try {
@@ -57,9 +48,8 @@ async function nextQuestion() {
             renderButtons(track);
         } else { nextQuestion(); }
     } catch (e) { 
-        console.error(e);
         localStorage.clear();
-        // location.reload(); 
+        window.location.reload(); 
     }
 }
 
