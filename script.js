@@ -18,57 +18,47 @@ let currentTrack = null;
 window.onload = () => {
     const hash = window.location.hash;
     
-    // 1. URL'den yeni token gelmiş mi kontrol et
+    // 1. URL'den token gelmiş mi yakala
     if (hash && hash.includes("access_token")) {
-        const params = new URLSearchParams(hash.substring(1));
-        token = params.get("access_token");
+        token = hash.substring(1).split('&').find(elem => elem.startsWith('access_token')).split('=')[1];
         window.localStorage.setItem('token', token);
         window.location.hash = "";
     }
 
-    // 2. EĞER TOKEN VARSA DİREKT OYUNU BAŞLAT (HİÇ BEKLEME)
-    if (token) {
+    // 2. OTOMATİK YÖNLENDİRME VEYA OYUN BAŞLATMA
+    if (!token) {
+        // Eğer giriş yoksa "tıkla" demesini bekleme, direkt Spotify'a gönder!
+        window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=user-read-private`;
+    } else {
+        // Giriş varsa arayüzü aç ve oyunu başlat
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'block';
         nextQuestion();
-    } else {
-        // Token yoksa giriş ekranını göster
-        document.getElementById('login-screen').style.display = 'block';
     }
-
-    // 3. BUTON TIKLAMA
-    document.getElementById('login-btn').onclick = () => {
-        window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=user-read-private`;
-    };
 };
 
 async function nextQuestion() {
     currentTrack = trackPool[Math.floor(Math.random() * trackPool.length)];
-    
     try {
-        const response = await fetch(`https://api.spotify.com/v1/tracks/${currentTrack.id}`, {
+        const res = await fetch(`https://api.spotify.com/v1/tracks/${currentTrack.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const data = await response.json();
+        const data = await res.json();
 
         if (data.preview_url) {
             currentAudio.src = data.preview_url;
             currentAudio.play();
-            showOptions();
-        } else {
-            nextQuestion();
-        }
-    } catch (e) {
-        // Eğer token'ın süresi bittiyse (hata verirse) tekrar giriş ekranına at
+            renderGame();
+        } else { nextQuestion(); }
+    } catch (e) { 
         window.localStorage.removeItem('token');
-        location.reload();
+        location.reload(); 
     }
 }
 
-function showOptions() {
+function renderGame() {
     const container = document.getElementById('options-container');
     container.innerHTML = "";
-    
     let options = [currentTrack];
     while(options.length < 3) {
         let r = trackPool[Math.floor(Math.random() * trackPool.length)];
@@ -82,15 +72,11 @@ function showOptions() {
         b.className = "option-btn";
         b.onclick = () => {
             currentAudio.pause();
-            const feedback = document.getElementById('feedback');
             if(t.id === currentTrack.id) {
                 score += 10;
                 document.getElementById('score').innerText = score;
-                feedback.innerText = "✅ DOĞRU!";
-            } else {
-                feedback.innerText = "❌ YANLIŞ!";
             }
-            setTimeout(nextQuestion, 1200);
+            setTimeout(nextQuestion, 800);
         };
         container.appendChild(b);
     });
