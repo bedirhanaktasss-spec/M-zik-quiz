@@ -1,87 +1,70 @@
-// --- SPOTIFY AYARLARI ---
-const CLIENT_ID =  'a1365b21350f4b709887d1b0ffcbdaa5';
-
-const REDIRECT_URI = window.location.origin; 
+// --- 1. SPOTIFY AYARLARI ---
+const CLIENT_ID = 'a1365b21350f4b709887d1b0ffcbdaa5'; 
+const REDIRECT_URI = window.location.origin;
 const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
 const RESPONSE_TYPE = "token";
 const SCOPES = "user-read-private";
 
-// --- OYUN VERİLERİ (Örnek Track ID'ler) ---
+// --- 2. OYUN VERİLERİ (Şarkı Listesi) ---
 const trackPool = [
-    { name: "10MG", artist: "Motive", id: "0v0oV9h65O8N3uS78O6T5S" },
-    { name: "Arasan Da", artist: "Uzi", id: "2S6p6Xn3pP8v7vM8y8Z9pQ" },
-    { name: "Doğuştan Beri", artist: "Lvbel C5", id: "1YmRndR4G4rE9zM6iV8B2S" },
-    { name: "İmdat", artist: "Çakal", id: "466Xn3pP8v7vM8y8Z9pQ" }
+    { name: "10MG", artist: "Motive", id: "0v0oV9h6jO0pI" },
+    { name: "Arasan Da", artist: "Uzi", id: "2S6p6DqF6U" },
+    { name: "Doğuştan Beri", artist: "Lvbel C5", id: "5pXk" },
+    { name: "İmdat", artist: "Çakal", id: "466Xn3p" }
 ];
 
-let token = window.localStorage.getItem("token");
+let token = window.localStorage.getItem('token');
 let currentAudio = new Audio();
 
-// 1. SPOTIFY LOGIN
-document.getElementById('login-btn').onclick = () => {
-    window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=${RESPONSE_TYPE}&scope=${SCOPES}`;
-};
-
-// 2. TOKEN KONTROL
+// --- 3. TOKEN YAKALAMA VE OTOMATİK GİRİŞ ---
 const hash = window.location.hash;
+
 if (!token && hash) {
-    token = hash.substring(1).split("&").find(elem => elem.startsWith("access_token")).split("=")[1];
-    window.location.hash = "";
-    window.localStorage.setItem("token", token);
-}
-
-if (token) {
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('game-screen').style.display = 'block';
-    nextQuestion();
-}
-
-// 3. OYUN FONKSİYONLARI
-async function nextQuestion() {
-    document.body.className = "";
-    document.getElementById('record').style.animationPlayState = 'paused';
-    
-    const randomTrack = trackPool[Math.floor(Math.random() * trackPool.length)];
-    
-    const response = await fetch(`https://api.spotify.com/v1/tracks/${randomTrack.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await response.json();
-
-    if (data.preview_url) {
-        currentAudio.src = data.preview_url;
-        currentAudio.play();
-        document.getElementById('record').style.animationPlayState = 'running';
-        displayOptions(randomTrack);
-    } else {
-        nextQuestion(); // Preview yoksa atla
+    const params = new URLSearchParams(hash.substring(1));
+    token = params.get("access_token");
+    if (token) {
+        window.location.hash = "";
+        window.localStorage.setItem('token', token);
     }
 }
 
-function displayOptions(correct) {
-    const container = document.getElementById('options-container');
-    container.innerHTML = "";
-    
-    let choices = [
-        `${correct.artist} - ${correct.name}`,
-        "Motive - 22",
-        "Uzi - Makina",
-        "Güneş - Dua"
-    ].sort(() => 0.5 - Math.random());
+// Sayfa yüklendiğinde durumu kontrol et
+window.onload = () => {
+    const loginBtn = document.getElementById('login-btn');
+    const loginScreen = document.getElementById('login-screen');
+    const gameScreen = document.getElementById('game-screen');
 
-    choices.forEach(choice => {
-        const btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.innerText = choice;
-        btn.onclick = () => {
-            currentAudio.pause();
-            if(choice === `${correct.artist} - ${correct.name}`) {
-                document.body.classList.add("neon-dogru");
-            } else {
-                document.body.classList.add("neon-yanlis");
-            }
-            setTimeout(nextQuestion, 1500);
+    if (token) {
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (gameScreen) gameScreen.style.display = 'block';
+        nextQuestion(); 
+    }
+
+    if (loginBtn) {
+        loginBtn.onclick = () => {
+            window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=${RESPONSE_TYPE}&scope=${encodeURIComponent(SCOPES)}`;
         };
-        container.appendChild(btn);
-    });
+    }
+};
+
+// --- 4. OYUN FONKSİYONLARI ---
+async function nextQuestion() {
+    const randomTrack = trackPool[Math.floor(Math.random() * trackPool.length)];
+    
+    try {
+        const response = await fetch(`https://api.spotify.com/v1/tracks/${randomTrack.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (data.preview_url) {
+            currentAudio.src = data.preview_url;
+            currentAudio.play();
+        } else {
+            console.error("Şarkı önizlemesi bulunamadı, sonrakine geçiliyor...");
+            nextQuestion();
+        }
+    } catch (error) {
+        console.error("Spotify API hatası:", error);
+    }
 }
