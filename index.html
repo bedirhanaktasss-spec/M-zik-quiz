@@ -3,34 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Müzik Quiz PRO | Secure</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Spotify Bağlantısı</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1DB954 0%, #191414 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #191414;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-btn {
+            background: #1DB954;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .login-btn:hover {
+            background: #1ed760;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(29, 185, 84, 0.4);
+        }
+
+        .login-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .user-info {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f8f8;
+            border-radius: 10px;
+        }
+
+        .user-info.active {
+            display: block;
+        }
+
+        .user-info h2 {
+            color: #191414;
+            margin-bottom: 15px;
+        }
+
+        .user-info p {
+            color: #666;
+            margin: 10px 0;
+        }
+
+        .profile-img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 15px auto;
+            display: block;
+        }
+
+        .logout-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #ff6666;
+        }
+
+        .error {
+            color: #ff4444;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+
+        .loading.active {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-    <div class="bg-blur-effect"></div>
-
-    <div id="login-screen" class="container">
-        <h1 class="neon-text">MÜZİK QUIZ</h1>
-        <p class="intro-text">Spotify kütüphaneni test etmeye hazır mısın?</p>
-        <button id="login-button" onclick="redirectToSpotify()">
-            SPOTIFY İLE BAĞLAN
+    <div class="container">
+        <h1>🎵 Spotify'a Bağlan</h1>
+        <p class="subtitle">Müzik verilerine erişmek için Spotify hesabınla giriş yap</p>
+        
+        <button id="loginBtn" class="login-btn">
+            <span>🎧</span>
+            <span>Spotify ile Giriş Yap</span>
         </button>
-    </div>
 
-    <div id="game-container" class="container hidden" style="display: none;">
-        <div class="quiz-header">
-            <p>Puan: <span id="score">0</span></p>
-            <p>Kalan Süre: <span id="timer-display">15</span></p>
+        <div class="loading" id="loading">
+            Yükleniyor...
         </div>
-        
-        <div id="options-container">
-            </div>
 
-        <div id="feedback"></div>
-        
-        <button onclick="logout()" class="exit-btn">Çıkış Yap</button>
+        <div class="error" id="error">
+            Bir hata oluştu. Lütfen tekrar dene.
+        </div>
+
+        <div class="user-info" id="userInfo">
+            <h2>Hoş geldin! 👋</h2>
+            <img id="profileImg" class="profile-img" src="" alt="Profil">
+            <p><strong>Ad:</strong> <span id="displayName"></span></p>
+            <p><strong>Email:</strong> <span id="email"></span></p>
+            <p><strong>Ülke:</strong> <span id="country"></span></p>
+            <p><strong>Takipçi:</strong> <span id="followers"></span></p>
+            <button class="logout-btn" id="logoutBtn">Çıkış Yap</button>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="spotify.js"></script>
 </body>
 </html>
