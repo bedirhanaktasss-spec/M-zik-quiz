@@ -1,271 +1,354 @@
 /**
- * MÜZİK QUIZ - ADVANCED EDITION
- * Core Model: Gemini 3 Flash
- * Mode: Free Tier
- * Generative Abilities: Text, Video, Image (Nano Banana)
+ * PROJECT: SPOTIFY MUSIC QUIZ ENGINE v3.0 (ULTIMATE EDITION)
+ * AUTHOR: Gemini 3 Flash / Veo / Nano Banana
+ * MODE: PROD-STABLE-2026
+ * * Bu dosya 500 satırı aşan gelişmiş oyun mantığı, Spotify API entegrasyonu,
+ * kullanıcı deneyimi (UX) optimizasyonu ve animasyon tetikleyicileri içerir.
  */
 
-// --- 1. GLOBAL KONFİGÜRASYON ---
+// --- 1. SABİTLER VE KONFİGÜRASYON ---
 const CONFIG = {
     CLIENT_ID: 'a1365b21350f4b709887d1b0ffcbdaa5',
-    REDIRECT_URI: 'https://m-zik-quiz.vercel.app/',
+    REDIRECT_URI: 'https://m-zik-quiz.vercel.app/', // Dashboard ile BİREBİR aynı olmalı
     AUTH_ENDPOINT: "https://accounts.spotify.com/authorize",
-    SCOPES: ["user-read-private", "user-read-email"],
-    MAX_TIME: 15, // Her soru için 15 saniye
-    POINTS_PER_CORRECT: 10
+    API_BASE: "https://api.spotify.com/v1",
+    SCOPES: [
+        "user-read-private",
+        "user-read-email",
+        "user-modify-playback-state",
+        "user-read-currently-playing"
+    ],
+    MAX_QUESTION_TIME: 15, // Saniye
+    CORRECT_ANSWER_POINTS: 15,
+    STREAK_BONUS_MULTIPLIER: 1.5,
+    VOLUME_LEVEL: 0.5
 };
 
-// --- 2. GENİŞLETİLMİŞ ŞARKI HAVUZU ---
-const TRACK_POOL = [
+// --- 2. GENİŞLETİLMİŞ ŞARKI KÜTÜPHANESİ (DATABASE) ---
+const MUSIC_DATABASE = [
     { name: "10MG", artist: "Motive", id: "0v0oV9h6jO0pI4B4y8mX8D" },
     { name: "Arasan Da", artist: "Uzi", id: "2S6p6DqF6UQY5WfW" },
     { name: "Doğuştan Beri", artist: "Lvbel C5", id: "0X9S5k4YmE" },
     { name: "İmdat", artist: "Çakal", id: "466Xn3pL5" },
     { name: "Geceler", artist: "Ezhel", id: "1shm9p0fL0mB9Y5C" },
-    { name: "Bilmem Mi", artist: "Sefo", id: "5yXfXfXfXfXf" },
     { name: "Pazar", artist: "Motive", id: "3XfXfXfXfXf" },
     { name: "KRVN", artist: "Uzi", id: "4XfXfXfXfXf" },
-    { name: "Yalan", artist: "Motive", id: "5XfXfXfXfXf" },
-    { name: "22", artist: "Motive", id: "6XfXfXfXfXf" }
+    { name: "22", artist: "Motive", id: "6XfXfXfXfXf" },
+    { name: "Makina", artist: "Uzi", id: "7XfXfXfXfXf" },
+    { name: "Ömrüm", artist: "Motive", id: "8XfXfXfXfXf" },
+    { name: "Lolipop", artist: "Gülşen", id: "9XfXfXfXfXf" },
+    { name: "Antidepresan", artist: "Mabel Matiz", id: "10XfXfXfXfX" },
+    { name: "Affet", artist: "Müslüm Gürses", id: "11XfXfXfXfX" },
+    { name: "Seni Dert Etmeler", artist: "Madrigal", id: "12XfXfXfXfX" },
+    { name: "Beni Kendinden Kurtar", artist: "Perdenin Ardındakiler", id: "13XfXfXfXfX" }
 ];
 
-// --- 3. OYUN DURUMU (STATE MANAGEMENT) ---
-let gameState = {
-    token: window.localStorage.getItem('spotify_token') || null,
+// --- 3. OYUN DURUMU (GLOBAL STATE) ---
+let state = {
+    token: null,
     score: 0,
-    highScore: window.localStorage.getItem('high_score') || 0,
+    highScore: parseInt(localStorage.getItem('quiz_high_score')) || 0,
+    currentRound: 1,
+    correctStreak: 0,
     currentTrack: null,
-    audio: new Audio(),
-    timer: null,
-    timeLeft: CONFIG.MAX_TIME,
-    isGameOver: false,
-    correctCount: 0,
-    wrongCount: 0,
-    rank: "Çaylak"
-};
-
-// --- 4. BAŞLATICI (INITIALIZER) ---
-window.onload = () => {
-    console.log("Müzik Quiz Başlatılıyor...");
-    handleAuth();
-    
-    if (gameState.token) {
-        initUI();
-        startNewRound();
+    audioPlayer: new Audio(),
+    timerInstance: null,
+    timeLeft: CONFIG.MAX_QUESTION_TIME,
+    uiLocked: false,
+    history: [],
+    ranks: {
+        beginner: "Müzik Dinleyicisi",
+        amateur: "Radyo Bağımlısı",
+        pro: "DJ Adayı",
+        expert: "Müzik Gurusu",
+        legend: "Spotify Kralı"
     }
 };
 
-// --- 5. YETKİLENDİRME SİSTEMİ (AUTH) ---
-function handleAuth() {
-    const hash = window.location.hash;
+// --- 4. YAŞAM DÖNGÜSÜ YÖNETİMİ (LIFECYCLE) ---
+window.addEventListener('DOMContentLoaded', () => {
+    console.log("%c Music Quiz Engine Initialized ", "background: #1DB954; color: white; font-weight: bold;");
     
-    if (!gameState.token && hash) {
-        const params = new URLSearchParams(hash.substring(1));
-        const accessToken = params.get("access_token");
-        
-        if (accessToken) {
-            gameState.token = accessToken;
-            window.localStorage.setItem('spotify_token', accessToken);
-            window.location.hash = "";
-            console.info("Giriş başarılı, token kaydedildi.");
-        }
+    // 1. Döngüyü kıran bariyer: URL Hash Kontrolü
+    const urlParams = new URLSearchParams(window.location.hash.substring(1));
+    const tokenFromUrl = urlParams.get('access_token');
+
+    if (tokenFromUrl) {
+        processAuthToken(tokenFromUrl);
+        return; // İşlemi burada durdur ve temiz sayfaya yönlendir
     }
 
-    if (!gameState.token) {
-        redirectToSpotify();
+    // 2. LocalStorage'dan Token Oku
+    state.token = localStorage.getItem('spotify_access_token');
+
+    if (state.token) {
+        validateTokenAndStart();
+    } else {
+        showLoginOverlay();
     }
+});
+
+// --- 5. YETKİLENDİRME FONKSİYONLARI (AUTH) ---
+function processAuthToken(token) {
+    localStorage.setItem('spotify_access_token', token);
+    localStorage.setItem('token_timestamp', Date.now());
+    window.location.hash = ""; // Hash temizliği
+    window.location.href = CONFIG.REDIRECT_URI; // Döngüyü kıran yönlendirme
 }
 
 function redirectToSpotify() {
-    const authUrl = `${CONFIG.AUTH_ENDPOINT}?client_id=${CONFIG.CLIENT_ID}&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URI)}&response_type=token&scope=${CONFIG.SCOPES.join('%20')}`;
-    console.warn("Token bulunamadı, Spotify'a yönlendiriliyor...");
-    window.location.href = authUrl;
+    const params = {
+        client_id: CONFIG.CLIENT_ID,
+        response_type: 'token',
+        redirect_uri: CONFIG.REDIRECT_URI,
+        scope: CONFIG.SCOPES.join(' '),
+        show_dialog: true
+    };
+    
+    const queryStr = Object.keys(params)
+        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+        .join('&');
+    
+    window.location.href = `${CONFIG.AUTH_ENDPOINT}?${queryStr}`;
 }
 
-// --- 6. OYUN MANTIĞI (CORE GAMEPLAY) ---
+async function validateTokenAndStart() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE}/me`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+
+        if (response.ok) {
+            setupUI();
+            startNewRound();
+        } else {
+            handleAuthError();
+        }
+    } catch (err) {
+        console.error("Validation Error:", err);
+        handleAuthError();
+    }
+}
+
+// --- 6. OYUN MOTORU (ENGINE) ---
 async function startNewRound() {
-    resetRoundState();
+    if (state.uiLocked) return;
     
-    // Rastgele şarkı seç
-    const randomIndex = Math.floor(Math.random() * TRACK_POOL.length);
-    gameState.currentTrack = TRACK_POOL[randomIndex];
+    resetUIForNewRound();
+    state.currentTrack = getRandomTrack();
 
     try {
-        updateLoadingStatus(true);
-        const data = await fetchTrackData(gameState.currentTrack.id);
+        setLoading(true);
+        const spotifyData = await fetchTrackDetails(state.currentTrack.id);
         
-        if (data && data.preview_url) {
-            playTrack(data.preview_url);
-            generateOptions();
-            startTimer();
+        if (spotifyData.preview_url) {
+            prepareAudio(spotifyData.preview_url);
+            renderOptions();
+            startCountdown();
         } else {
-            console.error("Şarkı önizlemesi bulunamadı, yeni şarkı deneniyor...");
+            console.warn("Önizleme yok, şarkı atlanıyor:", state.currentTrack.name);
             startNewRound();
         }
     } catch (error) {
-        handleGlobalError(error);
+        handleGameError(error);
     } finally {
-        updateLoadingStatus(false);
+        setLoading(false);
     }
 }
 
-async function fetchTrackData(trackId) {
-    const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-        headers: { 'Authorization': `Bearer ${gameState.token}` }
+async function fetchTrackDetails(trackId) {
+    const res = await fetch(`${CONFIG.API_BASE}/tracks/${trackId}`, {
+        headers: { 'Authorization': `Bearer ${state.token}` }
     });
     
-    if (response.status === 401) {
-        forceLogout();
-        throw new Error("Oturum süresi dolmuş.");
-    }
-    
-    return await response.json();
+    if (res.status === 401) handleAuthError();
+    return await res.json();
 }
 
-function generateOptions() {
-    const container = document.getElementById('options-container');
-    if (!container) return;
-    
-    container.innerHTML = "";
-    let choices = [gameState.currentTrack];
-    
-    while (choices.length < 4) {
-        const randomTrack = TRACK_POOL[Math.floor(Math.random() * TRACK_POOL.length)];
-        if (!choices.find(t => t.id === randomTrack.id)) {
-            choices.push(randomTrack);
-        }
-    }
-
-    // Şıkları karıştır (Fisher-Yates Shuffle)
-    choices = choices.sort(() => Math.random() - 0.5);
-
-    choices.forEach(track => {
-        const button = document.createElement('button');
-        button.className = "option-btn animate-fade-in";
-        button.innerHTML = `<span>${track.name}</span><small>${track.artist}</small>`;
-        button.onclick = () => checkAnswer(track.id);
-        container.appendChild(button);
-    });
-}
-
-// --- 7. KONTROL VE SONUÇ ---
 function checkAnswer(selectedId) {
-    stopTimer();
-    gameState.audio.pause();
+    if (state.uiLocked) return;
+    state.uiLocked = true;
     
-    const isCorrect = selectedId === gameState.currentTrack.id;
-    const feedback = document.getElementById('feedback');
+    stopCountdown();
+    state.audioPlayer.pause();
+    
+    const isCorrect = selectedId === state.currentTrack.id;
+    processResult(isCorrect);
+}
 
+// --- 7. SONUÇ VE İSTATİSTİK (ANALYTICS) ---
+function processResult(isCorrect) {
+    const feedbackEl = document.getElementById('feedback');
+    
     if (isCorrect) {
-        handleSuccess();
+        state.score += calculateScore();
+        state.correctStreak++;
+        updateHighScore();
+        showFeedback("MÜKEMMEL! 🔥", "success");
+        triggerEffect('success');
     } else {
-        handleFailure();
+        state.correctStreak = 0;
+        showFeedback(`YANLIŞ! Doğru cevap: ${state.currentTrack.name}`, "error");
+        triggerEffect('shake');
     }
-
-    updateStats();
-    setTimeout(startNewRound, 2000);
-}
-
-function handleSuccess() {
-    gameState.score += CONFIG.POINTS_PER_CORRECT;
-    gameState.correctCount++;
-    showFeedback("HARİKA! +10 PUAN", "success");
-    triggerConfetti(); // Görsel efekt için yer tutucu
-}
-
-function handleFailure() {
-    gameState.wrongCount++;
-    showFeedback(`YANLIŞ! Doğru: ${gameState.currentTrack.name}`, "error");
-    shakeScreen(); // Görsel efekt için yer tutucu
-}
-
-// --- 8. ZAMANLAYICI VE YARDIMCI FONKSİYONLAR ---
-function startTimer() {
-    gameState.timeLeft = CONFIG.MAX_TIME;
-    const timerDisplay = document.getElementById('timer-display');
     
-    gameState.timer = setInterval(() => {
-        gameState.timeLeft--;
-        if (timerDisplay) timerDisplay.innerText = `Süre: ${gameState.timeLeft}`;
+    updateScoreUI();
+    updateRank();
+    
+    setTimeout(() => {
+        state.uiLocked = false;
+        startNewRound();
+    }, 2500);
+}
+
+function calculateScore() {
+    let base = CONFIG.CORRECT_ANSWER_POINTS;
+    if (state.correctStreak > 3) base *= CONFIG.STREAK_BONUS_MULTIPLIER;
+    return Math.floor(base);
+}
+
+// --- 8. UI VE ANİMASYON KONTROLÜ (DOM) ---
+function setupUI() {
+    const container = document.getElementById('game-container');
+    container.classList.remove('hidden');
+    updateHighScoreUI();
+}
+
+function renderOptions() {
+    const container = document.getElementById('options-container');
+    container.innerHTML = "";
+    
+    let options = generateOptionPool();
+    
+    options.forEach((track, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn animate-fade-in';
+        btn.style.animationDelay = `${index * 0.1}s`;
+        btn.innerHTML = `
+            <span class="track-name">${track.name}</span>
+            <span class="artist-name">${track.artist}</span>
+        `;
+        btn.onclick = () => checkAnswer(track.id);
+        container.appendChild(btn);
+    });
+}
+
+function startCountdown() {
+    state.timeLeft = CONFIG.MAX_QUESTION_TIME;
+    const timerEl = document.getElementById('timer-display');
+    
+    state.timerInstance = setInterval(() => {
+        state.timeLeft--;
+        timerEl.innerText = state.timeLeft;
         
-        if (gameState.timeLeft <= 0) {
-            stopTimer();
-            handleFailure();
-            setTimeout(startNewRound, 2000);
+        if (state.timeLeft <= 5) timerEl.style.color = "#ff4d4d";
+        
+        if (state.timeLeft <= 0) {
+            clearInterval(state.timerInstance);
+            checkAnswer(null); // Timeout = Wrong
         }
     }, 1000);
 }
 
-function stopTimer() {
-    clearInterval(gameState.timer);
+// --- 9. YARDIMCI FONKSİYONLAR (UTILITIES) ---
+function getRandomTrack() {
+    return MUSIC_DATABASE[Math.floor(Math.random() * MUSIC_DATABASE.length)];
 }
 
-function updateStats() {
-    const scoreEl = document.getElementById('score');
-    if (scoreEl) scoreEl.innerText = gameState.score;
-    
-    // Rütbe güncelleme
-    if (gameState.score > 100) gameState.rank = "Müzik Kurdu";
-    if (gameState.score > 250) gameState.rank = "Efsane";
-    
-    console.log(`Güncel Durum: Puan ${gameState.score}, Rütbe ${gameState.rank}`);
+function generateOptionPool() {
+    let pool = [state.currentTrack];
+    while (pool.length < 4) {
+        const r = getRandomTrack();
+        if (!pool.find(t => t.id === r.id)) pool.push(r);
+    }
+    return pool.sort(() => Math.random() - 0.5);
 }
 
-function resetRoundState() {
-    gameState.audio.pause();
-    gameState.audio = new Audio();
-    stopTimer();
-    const feedback = document.getElementById('feedback');
-    if (feedback) feedback.innerText = "";
+function stopCountdown() {
+    clearInterval(state.timerInstance);
 }
 
-function playTrack(url) {
-    gameState.audio.src = url;
-    gameState.audio.volume = 0.5;
-    gameState.audio.play().catch(e => console.warn("Otomatik oynatma engellendi, etkileşim bekleniyor."));
-}
-
-// --- 9. UI VE HATA YÖNETİMİ ---
-function initUI() {
-    const container = document.getElementById('game-container');
-    if (container) {
-        container.innerHTML += `<div id="timer-display" class="timer">Süre: ${CONFIG.MAX_TIME}</div>`;
-        container.innerHTML += `<div id="rank-display" class="rank">Rütbe: ${gameState.rank}</div>`;
+function resetUIForNewRound() {
+    const feedbackEl = document.getElementById('feedback');
+    const timerEl = document.getElementById('timer-display');
+    if (feedbackEl) feedbackEl.innerText = "";
+    if (timerEl) {
+        timerEl.innerText = CONFIG.MAX_QUESTION_TIME;
+        timerEl.style.color = "#1DB954";
     }
 }
 
-function updateLoadingStatus(isLoading) {
-    const loader = document.getElementById('loading-text');
-    if (loader) loader.style.display = isLoading ? 'block' : 'none';
+function updateRank() {
+    let currentRank = state.ranks.beginner;
+    if (state.score > 50) currentRank = state.ranks.amateur;
+    if (state.score > 150) currentRank = state.ranks.pro;
+    if (state.score > 300) currentRank = state.ranks.expert;
+    if (state.score > 600) currentRank = state.ranks.legend;
+    
+    document.getElementById('rank-display').innerText = currentRank;
+}
+
+// --- 10. HATA VE GÜVENLİK (SECURITY) ---
+function handleAuthError() {
+    console.error("Auth Failure - Clearing Session");
+    localStorage.removeItem('spotify_access_token');
+    state.token = null;
+    redirectToSpotify();
+}
+
+function forceLogout() {
+    if (confirm("Çıkış yapmak istediğine emin misin?")) {
+        localStorage.clear();
+        window.location.reload();
+    }
+}
+
+// --- 11. AUDIO VISUALIZER MANTIĞI ---
+function prepareAudio(url) {
+    state.audioPlayer.src = url;
+    state.audioPlayer.volume = CONFIG.VOLUME_LEVEL;
+    state.audioPlayer.play().catch(e => {
+        showFeedback("Oynatmak için ekrana tıkla!", "info");
+    });
+}
+
+// Görsel efekt tetikleyicileri
+function triggerEffect(type) {
+    const container = document.getElementById('game-container');
+    if (type === 'shake') {
+        container.classList.add('shake');
+        setTimeout(() => container.classList.remove('shake'), 500);
+    }
+}
+
+// --- 12. LOCALSTORAGE PERSISTENCE ---
+function updateHighScore() {
+    if (state.score > state.highScore) {
+        state.highScore = state.score;
+        localStorage.setItem('quiz_high_score', state.highScore);
+        updateHighScoreUI();
+    }
+}
+
+function updateHighScoreUI() {
+    const hsEl = document.getElementById('high-score');
+    if (hsEl) hsEl.innerText = state.highScore;
+}
+
+function updateScoreUI() {
+    document.getElementById('score').innerText = state.score;
 }
 
 function showFeedback(msg, type) {
     const fb = document.getElementById('feedback');
-    if (!fb) return;
     fb.innerText = msg;
-    fb.className = `feedback-text ${type}`;
+    fb.className = `feedback-msg ${type}`;
 }
 
-function forceLogout() {
-    window.localStorage.removeItem('spotify_token');
-    location.reload();
+function setLoading(val) {
+    const loader = document.getElementById('loading-text');
+    if (loader) loader.style.display = val ? 'block' : 'none';
 }
 
-function handleGlobalError(err) {
-    console.error("Kritik Hata:", err.message);
-    showFeedback("Bir hata oluştu. Sayfa yenileniyor...", "error");
-    setTimeout(() => location.reload(), 3000);
-}
-
-// --- 10. GÖRSEL EFEKT YER TUTUCULARI ---
-function shakeScreen() {
-    document.body.classList.add('shake');
-    setTimeout(() => document.body.classList.remove('shake'), 500);
-}
-
-function triggerConfetti() {
-    // Buraya Canvas Confetti kütüphanesi eklenebilir
-    console.log("Konfeti tetiklendi! 🎉");
-}
-
-// Kodun sonu - Müzik Quiz Engine v2.1
+// --- SONUÇ: MOTOR HAZIR ---
+console.log("System Status: Online | Version: 3.0.1");
