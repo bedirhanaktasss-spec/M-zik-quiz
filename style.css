@@ -1,61 +1,191 @@
+/* --- 1. GLOBAL SIFIRLAMA VE DEĞİŞKENLER --- */
+:root {
+    --spotify-green: #1DB954;
+    --dark-bg: #121212;
+    --card-bg: #181818;
+    --text-main: #FFFFFF;
+    --text-dim: #b3b3b3;
+    --neon-shadow: 0 0 15px rgba(29, 185, 84, 0.4);
+    --error-red: #ff4d4d;
+    --transition-fast: 0.3s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Circular Std', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
 body {
-    background: #080808;
-    color: white;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica;
+    background-color: var(--dark-bg);
+    color: var(--text-main);
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    margin: 0;
-    transition: background 0.4s ease;
+    min-height: 100vh;
+    overflow-x: hidden;
 }
 
-/* Neon Durumları */
-.neon-dogru { background: #004d1a !important; box-shadow: inset 0 0 100px #1db954; }
-.neon-yanlis { background: #4d0000 !important; box-shadow: inset 0 0 100px #ff4444; }
+/* --- 2. ANA KONTEYNER TASARIMI --- */
+.container {
+    width: 90%;
+    max-width: 500px;
+    background: var(--card-bg);
+    padding: 2.5rem;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6), var(--neon-shadow);
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+}
 
-.neonText {
-    color: #fff;
-    text-shadow: 0 0 7px #1db954, 0 0 10px #1db954, 0 0 21px #1db954;
+/* --- 3. BAŞLIK VE SKOR ALANI --- */
+.neon-text {
     font-size: 2.5rem;
+    font-weight: 900;
+    letter-spacing: -1px;
+    color: var(--spotify-green);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 10px rgba(29, 185, 84, 0.3);
 }
 
-#login-btn {
-    background: #1db954;
-    color: black;
-    border: none;
-    padding: 18px 35px;
+#score-area {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px 20px;
     border-radius: 50px;
-    font-weight: bold;
-    font-size: 1rem;
-    cursor: pointer;
+    display: inline-block;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-bottom: 2rem;
 }
 
-.vinyl-record {
-    width: 180px;
-    height: 180px;
-    background: url('https://cdn-icons-png.flaticon.com/512/26/26435.png');
-    background-size: cover;
-    border-radius: 50%;
-    margin: 20px auto;
-    animation: rotate 3s linear infinite;
-    animation-play-state: paused;
-    border: 5px solid #1db954;
+#score {
+    color: var(--spotify-green);
+    font-size: 1.4rem;
 }
 
-@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* --- 4. BUTONLAR (ŞIKLAR) --- */
+#options-container {
+    display: grid;
+    gap: 15px;
+    margin-top: 10px;
+}
 
 .option-btn {
-    background: #181818;
-    border: 1px solid #333;
-    color: white;
-    padding: 16px;
-    margin: 8px;
-    width: 280px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 18px;
     border-radius: 12px;
-    font-size: 1rem;
-    font-weight: 600;
-    transition: 0.2s;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
 }
 
-.option-btn:active { transform: scale(0.95); }
+.option-btn span {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.option-btn small {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+}
+
+.option-btn:hover {
+    background: rgba(29, 185, 84, 0.1);
+    border-color: var(--spotify-green);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(29, 185, 84, 0.2);
+}
+
+.option-btn:active {
+    transform: translateY(0);
+}
+
+/* --- 5. OYUN BİLGİLERİ (TIMER & RANK) --- */
+.timer {
+    font-size: 1.2rem;
+    color: var(--spotify-green);
+    font-weight: bold;
+    margin-top: 15px;
+    letter-spacing: 1px;
+}
+
+.rank {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    margin-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* --- 6. GERİ BİLDİRİM (FEEDBACK) --- */
+#feedback {
+    margin-top: 25px;
+    min-height: 30px;
+    font-weight: 800;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    transition: opacity 0.3s ease;
+}
+
+.success { color: var(--spotify-green); text-shadow: 0 0 10px rgba(29, 185, 84, 0.4); }
+.error { color: var(--error-red); text-shadow: 0 0 10px rgba(255, 77, 77, 0.4); }
+
+/* --- 7. ANİMASYONLAR --- */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.shake {
+    animation: shakeAnim 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shakeAnim {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* --- 8. YÜKLENİYOR EKRANI --- */
+#loading-text {
+    font-style: italic;
+    color: var(--text-dim);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.4; }
+    50% { opacity: 1; }
+    100% { opacity: 0.4; }
+}
+
+/* --- 9. MOBİL UYUMLULUK --- */
+@media (max-width: 480px) {
+    .container {
+        padding: 1.5rem;
+        width: 95%;
+    }
+    
+    .neon-text {
+        font-size: 1.8rem;
+    }
+    
+    .option-btn {
+        padding: 14px;
+    }
+}
