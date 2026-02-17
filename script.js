@@ -6,7 +6,8 @@ const trackPool = [
     { name: "10MG", artist: "Motive", id: "0v0oV9h6jO0pI4B4y8mX8D" },
     { name: "Arasan Da", artist: "Uzi", id: "2S6p6DqF6UQY5WfW" },
     { name: "Doğuştan Beri", artist: "Lvbel C5", id: "5pXkP6XN3z" },
-    { name: "İmdat", artist: "Çakal", id: "466Xn3p" }
+    { name: "İmdat", artist: "Çakal", id: "466Xn3p" },
+    { name: "Geceler", artist: "Ezhel", id: "4H4p2Y5v0" }
 ];
 
 let token = window.localStorage.getItem('token');
@@ -15,35 +16,37 @@ let score = 0;
 let currentTrack = null;
 
 window.onload = () => {
-    // 1. GİRİŞ KONTROLÜ
     const hash = window.location.hash;
-    if (!token && hash) {
+    
+    // 1. URL'den yeni token gelmiş mi kontrol et
+    if (hash && hash.includes("access_token")) {
         const params = new URLSearchParams(hash.substring(1));
         token = params.get("access_token");
-        if (token) {
-            window.localStorage.setItem('token', token);
-            window.location.hash = "";
-        }
+        window.localStorage.setItem('token', token);
+        window.location.hash = "";
     }
 
+    // 2. EĞER TOKEN VARSA DİREKT OYUNU BAŞLAT (HİÇ BEKLEME)
     if (token) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'block';
         nextQuestion();
+    } else {
+        // Token yoksa giriş ekranını göster
+        document.getElementById('login-screen').style.display = 'block';
     }
 
-    // 2. BUTON TIKLAMA
+    // 3. BUTON TIKLAMA
     document.getElementById('login-btn').onclick = () => {
         window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=user-read-private`;
     };
 };
 
-// 3. OYNANIŞ (Next Question)
 async function nextQuestion() {
     currentTrack = trackPool[Math.floor(Math.random() * trackPool.length)];
     
     try {
-        const response = await fetch(`https://api.spotify.com/v1/tracks/$${currentTrack.id}`, {
+        const response = await fetch(`https://api.spotify.com/v1/tracks/${currentTrack.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -55,7 +58,11 @@ async function nextQuestion() {
         } else {
             nextQuestion();
         }
-    } catch (e) { console.error("Hata:", e); }
+    } catch (e) {
+        // Eğer token'ın süresi bittiyse (hata verirse) tekrar giriş ekranına at
+        window.localStorage.removeItem('token');
+        location.reload();
+    }
 }
 
 function showOptions() {
@@ -65,7 +72,7 @@ function showOptions() {
     let options = [currentTrack];
     while(options.length < 3) {
         let r = trackPool[Math.floor(Math.random() * trackPool.length)];
-        if(!options.includes(r)) options.push(r);
+        if(!options.find(o => o.id === r.id)) options.push(r);
     }
     options.sort(() => Math.random() - 0.5);
 
@@ -75,14 +82,15 @@ function showOptions() {
         b.className = "option-btn";
         b.onclick = () => {
             currentAudio.pause();
+            const feedback = document.getElementById('feedback');
             if(t.id === currentTrack.id) {
                 score += 10;
                 document.getElementById('score').innerText = score;
-                document.getElementById('feedback').innerText = "✅ Harika!";
+                feedback.innerText = "✅ DOĞRU!";
             } else {
-                document.getElementById('feedback').innerText = "❌ Yanlış!";
+                feedback.innerText = "❌ YANLIŞ!";
             }
-            setTimeout(nextQuestion, 1000);
+            setTimeout(nextQuestion, 1200);
         };
         container.appendChild(b);
     });
