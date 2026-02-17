@@ -1,50 +1,36 @@
-// 1. AYARLAR - Senin bilgilerine göre güncelledim
 const CLIENT_ID = 'a1365b21350f4b709887d1b0ffcbdaa5';
-const REDIRECT_URI = 'https://m-zik-quiz.vercel.app';
+const REDIRECT_URI = 'https://m-zik-quiz.vercel.app'; 
 const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
-const RESPONSE_TYPE = "token";
-const SCOPES = "user-read-private";
 
-// 2. TOKEN YAKALAMA VE SAYFA YÜKLENİNCE YAPILACAKLAR
+// 1. SAYFA YÜKLENDİĞİNDE ANAHTARI YAKALA
 window.onload = () => {
     const hash = window.location.hash;
     let token = window.localStorage.getItem('token');
 
-    // Eğer URL'de token varsa onu al ve kaydet
-    if (!token && hash) {
-        const params = new URLSearchParams(hash.substring(1));
-        token = params.get("access_token");
-        if (token) {
-            window.localStorage.setItem('token', token);
-            window.location.hash = ""; // URL'deki karmaşayı temizle
-        }
+    // URL'de "access_token" var mı bak (Spotify'dan yeni döndüysen burası çalışır)
+    if (hash && hash.includes("access_token")) {
+        token = hash.substring(1).split('&').find(elem => elem.startsWith('access_token')).split('=')[1];
+        window.localStorage.setItem('token', token); // Anahtarı hafızaya al
+        window.location.hash = ""; // URL'deki kalabalığı temizle
     }
 
-    // Ekranları kontrol et
-    const loginScreen = document.getElementById('login-screen');
-    const gameScreen = document.getElementById('game-screen');
-
+    // 2. EKRAN KONTROLÜ
     if (token) {
-        // Giriş yapılmışsa oyunu göster
+        // Eğer anahtar varsa giriş ekranını gizle, oyun ekranını aç
+        const loginScreen = document.getElementById('login-screen');
+        const gameScreen = document.getElementById('game-screen');
+        
         if (loginScreen) loginScreen.style.display = 'none';
         if (gameScreen) gameScreen.style.display = 'block';
-        console.log("Spotify bağlantısı aktif!");
-        // Buraya ileride şarkı başlatma fonksiyonunu ekleyebilirsin
+        
+        console.log("Giriş başarılı! Anahtar:", token);
     }
 
-    // Buton tıklama olayını bağla
+    // 3. BUTONA TIKLAMA (Giriş Yapma)
     const loginBtn = document.getElementById('login-btn');
     if (loginBtn) {
         loginBtn.onclick = () => {
-            // Spotify'a gitmek için gereken tam URL
-            const loginUrl = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=${RESPONSE_TYPE}&scope=${encodeURIComponent(SCOPES)}`;
-            window.location.href = loginUrl;
+            window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=user-read-private`;
         };
     }
 };
-
-// 3. ÖRNEK OYUN VERİLERİ (İleride genişletilebilir)
-const trackPool = [
-    { name: "10MG", artist: "Motive", id: "0v0oV9h6jO0pI" },
-    { name: "Arasan Da", artist: "Uzi", id: "2S6p6DqF6U" }
-];
