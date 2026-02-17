@@ -3,23 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Müzik Quiz PRO</title>
+    <title>Müzik Quiz PRO | Secure</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="bg-blur-effect"></div>
+
     <div id="login-screen" class="container">
         <h1 class="neon-text">MÜZİK QUIZ</h1>
-        <button onclick="redirectToSpotify()" class="login-btn">SPOTIFY İLE BAĞLAN</button>
+        <p class="intro-text">Spotify kütüphaneni test etmeye hazır mısın?</p>
+        <button id="login-button" onclick="redirectToSpotify()">
+            SPOTIFY İLE BAĞLAN
+        </button>
     </div>
 
-    <div id="game-container" class="container hidden" style="display:none;">
-        <div class="stats">
+    <div id="game-container" class="container hidden" style="display: none;">
+        <div class="quiz-header">
             <p>Puan: <span id="score">0</span></p>
-            <p id="timer-display">15</p>
+            <p>Kalan Süre: <span id="timer-display">15</span></p>
         </div>
-        <div id="options-container"></div>
+        
+        <div id="options-container">
+            </div>
+
         <div id="feedback"></div>
-        <button onclick="logout()" class="logout-btn">Çıkış Yap</button>
+        
+        <button onclick="logout()" class="exit-btn">Çıkış Yap</button>
     </div>
 
     <script src="script.js"></script>
