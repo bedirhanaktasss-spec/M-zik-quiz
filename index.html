@@ -3,18 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Müzik Quiz</title>
+    <meta name="description" content="Spotify API destekli interaktif müzik tahmin yarışması">
+    <title>Müzik Quiz | Sınırları Zorla</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-container" class="container">
-        <h1 class="neon-text">Hangi Şarkı?</h1>
-        <div class="score-box">Puan: <span id="score">0</span></div>
-        <div id="options-container">
-            <p style="color: white;">Yükleniyor...</p>
+
+    <div class="bg-blur-effect"></div>
+
+    <div id="game-container" class="container animate-fade-in">
+        
+        <header class="quiz-header">
+            <div class="header-main">
+                <h1 class="neon-text">MÜZİK QUIZ</h1>
+                <div class="live-indicator">
+                    <span class="dot"></span> CANLI
+                </div>
+            </div>
+            
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    <span id="score">0</span>
+                </div>
+                <div id="timer-display" class="timer">15</div>
+                <div class="stat-item">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <span id="rank-display">Çaylak</span>
+                </div>
+            </div>
+        </header>
+
+        <hr class="divider">
+
+        <main class="quiz-body">
+            <div class="audio-visualizer">
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            </div>
+
+            <p class="instruction-text">Bu şarkının adı ne?</p>
+
+            <div id="options-container">
+                <div class="skeleton-loader"></div>
+                <div class="skeleton-loader"></div>
+                <div class="skeleton-loader"></div>
+                <div class="skeleton-loader"></div>
+            </div>
+        </main>
+
+        <footer class="quiz-footer">
+            <div id="feedback" class="feedback-msg"></div>
+            
+            <div class="user-info-footer">
+                <p>En Yüksek Skor: <span id="high-score">0</span></p>
+                <button onclick="forceLogout()" class="logout-link">Oturumu Kapat</button>
+            </div>
+        </footer>
+
+        <div id="game-over-modal" class="modal hidden">
+            <div class="modal-content">
+                <h2>OYUN BİTTİ!</h2>
+                <p>Toplam Puanın: <span id="final-score">0</span></p>
+                <p>Rütben: <span id="final-rank">Master</span></p>
+                <button onclick="location.reload()" class="retry-btn">TEKRAR DENE</button>
+            </div>
         </div>
-        <div id="feedback"></div>
+
     </div>
+
+    <aside class="sidebar-info">
+        <h3>Nasıl Oynanır?</h3>
+        <ul>
+            <li>Spotify önizlemesini dinle.</li>
+            <li>15 saniye içinde doğru şıkkı bul.</li>
+            <li>Yanlış cevapta puan kaybedilmez ama süre biter!</li>
+        </ul>
+        <div class="version-tag">Build: v2.4.0-Stable</div>
+    </aside>
+
+    <svg style="display: none;">
+        <symbol id="icon-music" viewBox="0 0 24 24">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </symbol>
+    </svg>
+
     <script src="script.js"></script>
-</body>
+    
+    </body>
 </html>
