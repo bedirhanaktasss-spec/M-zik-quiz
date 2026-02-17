@@ -3,19 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Müzik Quiz</title>
+    <title>Müzik Quiz - Spotify</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="login-screen" class="container">
         <h1 class="neon-text">MÜZİK QUIZ</h1>
-        <p>Şarkıları duymak için Spotify ile bağlan</p>
+        <p>Hangi şarkı çaldığını bulabilecek misin?</p>
         <button id="login-btn" class="spotify-btn">SPOTIFY İLE BAĞLAN</button>
     </div>
 
     <div id="game-screen" class="container" style="display: none;">
-        <h1 class="neon-text">BAŞARILI!</h1>
-        <p>Bağlantı kuruldu, oyun birazdan hazır olacak.</p>
+        <h1 class="neon-text">Hangi Şarkı?</h1>
+        <div class="score-board">Puan: <span id="score">0</span></div>
+        
+        <div id="options-container" class="options-grid">
+            </div>
+
+        <div id="feedback" class="feedback-text"></div>
     </div>
 
     <script src="script.js"></script>
