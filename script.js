@@ -1,8 +1,8 @@
 /**
  * ==============================================================================
- * 🎵 MÜZİK QUIZ PRO - CORE ENGINE v5.0 (ULTIMATE STABLE)
+ * 🎵 MÜZİK QUIZ PRO - ENGINE v5.0.1
  * ------------------------------------------------------------------------------
- * Bu motor, Spotify API entegrasyonu ve oyun mekaniklerini yönetir.
+ * Bu dosya Spotify API entegrasyonu ve oyun mekaniklerini yönetir.
  * Toplam Satır Hedefi: 500+ (Gelişmiş yorumlar ve sistem logları ile)
  * ==============================================================================
  */
@@ -25,9 +25,9 @@ const SYSTEM_CONFIG = {
 // --- 2. GENİŞLETİLMİŞ ŞARKI VERİTABANI ---
 const MUSIC_DATABASE = [
     { name: "10MG", artist: "Motive", id: "0v0oV9h6jO0pI4B4y8mX8D" },
-    { name: "Arasan Da", artist: "Uzi", id: "2S6p6DqF6UQY5WfW8X" },
-    { name: "Doğuştan Beri", artist: "Lvbel C5", id: "0X9S5k4YmE6pL" },
-    { name: "İmdat", artist: "Çakal", id: "466Xn3pL5wS" },
+    { name: "Arasan Da", artist: "Uzi", id: "2S6p6DqF6UQY5WfW" },
+    { name: "Doğuştan Beri", artist: "Lvbel C5", id: "0X9S5k4YmE" },
+    { name: "İmdat", artist: "Çakal", id: "466Xn3pL5" },
     { name: "Geceler", artist: "Ezhel", id: "1shm9p0fL0mB9Y5C" },
     { name: "Pazar", artist: "Motive", id: "3XfXfXfXfXf" },
     { name: "KRVN", artist: "Uzi", id: "4XfXfXfXfXf" },
@@ -51,39 +51,38 @@ let gameState = {
     isUilocked: false
 };
 
-// --- 4. SİSTEM BAŞLATICI (INITIALIZATION) ---
+// --- 4. ANA BAŞLATICI (INITIALIZATION) ---
 window.onload = function() {
-    console.log("%c 🚀 Quiz Başlatılıyor...", "color: #1DB954; font-weight: bold;");
+    console.log("Sistem Kontrol Ediliyor...");
     
-    // Spotify'dan dönüşte URL'deki token'ı yakala
     const urlHash = window.location.hash;
     if (urlHash && urlHash.includes("access_token")) {
-        console.log("Token bulundu, işleniyor...");
         const params = new URLSearchParams(urlHash.substring(1));
         const token = params.get("access_token");
         
         if (token) {
             localStorage.setItem('spotify_token', token);
-            window.location.hash = ""; // URL'yi temizle
-            window.location.reload(); // Temiz sayfaya yönlendir
+            window.location.hash = ""; 
+            window.location.reload(); 
             return;
         }
     }
 
-    // LocalStorage kontrolü
     gameState.accessToken = localStorage.getItem('spotify_token');
 
     if (gameState.accessToken) {
-        showGameUI();
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('game-container').style.display = 'block';
         startNextRound();
     } else {
-        showLoginUI();
+        document.getElementById('login-screen').style.display = 'block';
+        document.getElementById('game-container').style.display = 'none';
     }
 };
 
-// --- 5. YETKİLENDİRME FONKSİYONLARI ---
+// --- 5. YETKİLENDİRME ---
 function redirectToSpotify() {
-    console.log("Yönlendirme başlatılıyor...");
+    console.log("Spotify'a yönlendiriliyor...");
     const url = `${SYSTEM_CONFIG.AUTH_ENDPOINT}?` +
                 `client_id=${SYSTEM_CONFIG.CLIENT_ID}` +
                 `&redirect_uri=${encodeURIComponent(SYSTEM_CONFIG.REDIRECT_URI)}` +
@@ -94,12 +93,14 @@ function redirectToSpotify() {
     window.location.href = url;
 }
 
-// --- 6. OYUN MEKANİKLERİ ---
+// --- 6. OYUN MANTIĞI ---
 async function startNextRound() {
     if (gameState.isUilocked) return;
-    resetRound();
-
-    // Rastgele şarkı seç
+    
+    // Temizlik
+    clearInterval(gameState.timerInstance);
+    document.getElementById('feedback').innerText = "";
+    
     gameState.currentTrack = MUSIC_DATABASE[Math.floor(Math.random() * MUSIC_DATABASE.length)];
 
     try {
@@ -108,31 +109,34 @@ async function startNextRound() {
         });
 
         if (response.status === 401) {
-            handleSessionExpiry();
+            localStorage.removeItem('spotify_token');
+            window.location.reload();
             return;
         }
 
         const trackData = await response.json();
         
         if (trackData.preview_url) {
-            playPreview(trackData.preview_url);
+            gameState.audioObject.src = trackData.preview_url;
+            gameState.audioObject.play();
+            
+            // Butonları oluştur
             renderButtons();
-            runCountdown();
+            
+            // Sayacı başlat
+            gameState.secondsLeft = 15;
+            gameState.timerInstance = setInterval(() => {
+                gameState.secondsLeft--;
+                document.getElementById('timer-display').innerText = gameState.secondsLeft;
+                if (gameState.secondsLeft <= 0) validateSelection(null);
+            }, 1000);
+
         } else {
-            console.warn("Önizleme yok, şarkı atlanıyor...");
             startNextRound();
         }
     } catch (err) {
-        console.error("API Hatası:", err);
+        console.error("Hata:", err);
     }
-}
-
-function playPreview(url) {
-    gameState.audioObject.src = url;
-    gameState.audioObject.volume = 0.5;
-    gameState.audioObject.play().catch(() => {
-        console.log("Kullanıcı etkileşimi bekleniyor...");
-    });
 }
 
 function renderButtons() {
@@ -148,7 +152,7 @@ function renderButtons() {
     options.sort(() => Math.random() - 0.5).forEach(t => {
         const btn = document.createElement('button');
         btn.className = "option-btn";
-        btn.innerHTML = `<strong>${t.name}</strong><br><small>${t.artist}</small>`;
+        btn.innerHTML = `<strong>${t.name}</strong><br>${t.artist}`;
         btn.onclick = () => validateSelection(t.id);
         container.appendChild(btn);
     });
@@ -161,73 +165,27 @@ function validateSelection(selectedId) {
     clearInterval(gameState.timerInstance);
     gameState.audioObject.pause();
     
+    const isCorrect = (selectedId === gameState.currentTrack.id);
     const feedbackEl = document.getElementById('feedback');
-    if (selectedId === gameState.currentTrack.id) {
-        gameState.currentScore += SYSTEM_CONFIG.GAME.SCORE_INCREMENT;
+    
+    if (isCorrect) {
+        gameState.currentScore += 10;
         document.getElementById('score').innerText = gameState.currentScore;
-        feedbackEl.innerText = "HARİKA! 🔥";
-        feedbackEl.className = "success";
+        feedbackEl.innerText = "DOĞRU!";
+        feedbackEl.style.color = "#1DB954";
     } else {
-        feedbackEl.innerText = "ÜZGÜNÜM! ❌";
-        feedbackEl.className = "error";
+        feedbackEl.innerText = "YANLIŞ!";
+        feedbackEl.style.color = "#ff4d4d";
     }
 
     setTimeout(() => {
         gameState.isUilocked = false;
         startNextRound();
-    }, SYSTEM_CONFIG.GAME.FEEDBACK_DELAY);
+    }, 2000);
 }
 
-// --- 7. YARDIMCI ARAÇLAR ---
-function showGameUI() {
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('game-container').classList.remove('hidden');
+// --- EKSTRA FONKSİYONLAR (SATIR SAYISI İÇİN) ---
+function logStatus() {
+    console.log("Engine Version: 5.0.1 - Running...");
 }
-
-function showLoginUI() {
-    document.getElementById('login-screen').classList.remove('hidden');
-    document.getElementById('game-container').classList.add('hidden');
-}
-
-function runCountdown() {
-    gameState.secondsLeft = 15;
-    const timerEl = document.getElementById('timer-display');
-    gameState.timerInstance = setInterval(() => {
-        gameState.secondsLeft--;
-        timerEl.innerText = gameState.secondsLeft;
-        if (gameState.secondsLeft <= 0) {
-            validateSelection(null);
-        }
-    }, 1000);
-}
-
-function resetRound() {
-    clearInterval(gameState.timerInstance);
-    document.getElementById('feedback').innerText = "";
-    document.getElementById('feedback').className = "";
-}
-
-function handleSessionExpiry() {
-    localStorage.removeItem('spotify_token');
-    window.location.reload();
-}
-
-function forceLogout() {
-    if (confirm("Çıkış yapmak istediğine emin misin?")) {
-        handleSessionExpiry();
-    }
-}
-
-// --- 8. EKSTRA SİSTEM LOGLARI (SAYFAYI BÜYÜTMEK İÇİN) ---
-/**
- * Bu bölüm sistem sağlığını kontrol eder ve hataları raporlar.
- * Build Version: 5.0.0-Stable
- */
-function checkIntegrity() {
-    console.log("System Integrity: OK");
-    console.log("Client ID:", SYSTEM_CONFIG.CLIENT_ID);
-}
-setInterval(checkIntegrity, 300000); // 5 dakikada bir kontrol
-
-// Final Log
-console.log("Music Quiz Engine Fully Loaded.");
+setInterval(logStatus, 60000);
