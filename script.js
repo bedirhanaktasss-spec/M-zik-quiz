@@ -3,13 +3,14 @@ const CLIENT_ID = 'a1365b21350f4b709887d1b0ffcbdaa5';
 const REDIRECT_URI = 'https://m-zik-quiz.vercel.app';
 const AUTH_ENDPOINT = "https://accounts.spotify.com/authorize";
 
-// --- 2. OYUN VERİLERİ (Daha fazla şarkı ekleyebilirsin) ---
+// --- 2. ŞARKI HAVUZU (Spotify ID'leri) ---
 const trackPool = [
     { name: "10MG", artist: "Motive", id: "0v0oV9h6jO0pI4B4y8mX8D" },
     { name: "Arasan Da", artist: "Uzi", id: "2S6p6DqF6UQY5WfW" },
     { name: "Doğuştan Beri", artist: "Lvbel C5", id: "5pXkP6XN3z" },
     { name: "İmdat", artist: "Çakal", id: "466Xn3p" },
-    { name: "Geceler", artist: "Ezhel", id: "4H4p2Y5v0" }
+    { name: "Geceler", artist: "Ezhel", id: "4H4p2Y5v0" },
+    { name: "Bilmem mi", artist: "Sefo", id: "5YpXkP6X" }
 ];
 
 let token = window.localStorage.getItem('token');
@@ -17,33 +18,40 @@ let currentAudio = new Audio();
 let score = 0;
 let currentTrack = null;
 
-// --- 3. GİRİŞ VE SAYFA YÜKLENME MANTIĞI ---
+// --- 3. GİRİŞ VE BAŞLATMA ---
 window.onload = () => {
     const hash = window.location.hash;
+    
+    // URL'den token yakalama
     if (!token && hash) {
-        token = hash.substring(1).split('&').find(elem => elem.startsWith('access_token')).split('=')[1];
-        window.localStorage.setItem('token', token);
-        window.location.hash = "";
+        const params = new URLSearchParams(hash.substring(1));
+        token = params.get("access_token");
+        if (token) {
+            window.localStorage.setItem('token', token);
+            window.location.hash = "";
+        }
     }
 
     if (token) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'block';
-        nextQuestion(); // Oyunu başlat
+        nextQuestion();
     }
 
     document.getElementById('login-btn').onclick = () => {
-        window.location.href = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=user-read-private`;
+        const url = `${AUTH_ENDPOINT}?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=user-read-private`;
+        window.location.href = url;
     };
 };
 
-// --- 4. OYUN FONKSİYONLARI ---
-
+// --- 4. OYUN MANTIĞI ---
 async function nextQuestion() {
-    // Rastgele bir şarkı seç
+    const feedback = document.getElementById('feedback');
+    if(feedback) feedback.innerText = "";
+
+    // Rastgele şarkı seç
     currentTrack = trackPool[Math.floor(Math.random() * trackPool.length)];
     
-    // Spotify'dan şarkı bilgisini çek (Önizleme URL'si için)
     try {
         const response = await fetch(`https://api.spotify.com/v1/tracks/${currentTrack.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -53,48 +61,49 @@ async function nextQuestion() {
         if (data.preview_url) {
             currentAudio.src = data.preview_url;
             currentAudio.play();
-            setupOptions(); // Şıkları hazırla
+            renderOptions();
         } else {
-            console.log("Önizleme yok, başka şarkıya geçiliyor...");
-            nextQuestion();
+            nextQuestion(); // Önizleme yoksa diğerine geç
         }
     } catch (err) {
-        console.error("Hata:", err);
+        console.error("Spotify hatası:", err);
     }
 }
 
-function setupOptions() {
-    const optionsContainer = document.getElementById('options-container');
-    if (!optionsContainer) return;
+function renderOptions() {
+    const container = document.getElementById('options-container');
+    container.innerHTML = "";
 
-    optionsContainer.innerHTML = ""; // Eski şıkları temizle
-    
-    // Şıkları karıştır (Doğru cevap + 2 rastgele yanlış cevap)
+    // 1 doğru, 2 yanlış şık hazırla
     let options = [currentTrack];
     while (options.length < 3) {
-        let randomWrong = trackPool[Math.floor(Math.random() * trackPool.length)];
-        if (!options.includes(randomWrong)) {
-            options.push(randomWrong);
-        }
+        let random = trackPool[Math.floor(Math.random() * trackPool.length)];
+        if (!options.find(o => o.id === random.id)) options.push(random);
     }
-    options.sort(() => Math.random() - 0.5); // Şıkları karıştır
+    options.sort(() => Math.random() - 0.5);
 
     options.forEach(track => {
         const btn = document.createElement('button');
         btn.innerText = `${track.name} - ${track.artist}`;
         btn.className = "option-btn";
         btn.onclick = () => checkAnswer(track.id);
-        optionsContainer.appendChild(btn);
+        container.appendChild(btn);
     });
 }
 
-function checkAnswer(selectedId) {
+function checkAnswer(id) {
     currentAudio.pause();
-    if (selectedId === currentTrack.id) {
+    const feedback = document.getElementById('feedback');
+    
+    if (id === currentTrack.id) {
         score += 10;
-        alert("Doğru! Puan: " + score);
+        document.getElementById('score').innerText = score;
+        feedback.innerText = "✅ DOĞRU!";
+        feedback.style.color = "#1DB954";
     } else {
-        alert("Yanlış! Doğru cevap: " + currentTrack.name);
+        feedback.innerText = "❌ YANLIŞ!";
+        feedback.style.color = "#ff4d4d";
     }
-    nextQuestion();
+
+    setTimeout(nextQuestion, 1500); // 1.5 saniye sonra yeni soru
 }
