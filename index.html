@@ -3,35 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Müzik Quiz PRO | v4.0</title>
+    <title>Müzik Quiz PRO</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app">
-        <section id="login-screen" class="screen">
-            <div class="container animate-fade-in">
-                <h1 class="neon-text">MÜZİK QUIZ</h1>
-                <p class="intro-text">Spotify kütüphaneni test etmeye hazır mısın?</p>
-                <button onclick="authManager.login()" class="login-btn">SPOTIFY İLE BAĞLAN</button>
-            </div>
-        </section>
-
-        <section id="game-screen" class="screen hidden">
-            <div class="container">
-                <header class="quiz-header">
-                    <div class="stats">
-                        <div class="stat-box">Puan: <span id="score">0</span></div>
-                        <div id="timer-display" class="timer">15</div>
-                        <div class="stat-box" id="rank-display">Çaylak</div>
-                    </div>
-                </header>
-                <div class="visualizer"><span></span><span></span><span></span></div>
-                <div id="options-container"></div>
-                <div id="feedback"></div>
-                <button onclick="authManager.logout()" class="logout-btn">Çıkış Yap</button>
-            </div>
-        </section>
+    <div id="login-screen" class="container">
+        <h1 class="neon-text">MÜZİK QUIZ</h1>
+        <button onclick="redirectToSpotify()" class="login-btn">SPOTIFY İLE BAĞLAN</button>
     </div>
+
+    <div id="game-container" class="container hidden" style="display:none;">
+        <div class="stats">
+            <p>Puan: <span id="score">0</span></p>
+            <p id="timer-display">15</p>
+        </div>
+        <div id="options-container"></div>
+        <div id="feedback"></div>
+        <button onclick="logout()" class="logout-btn">Çıkış Yap</button>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
